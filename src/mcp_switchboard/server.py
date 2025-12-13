@@ -3,6 +3,7 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 from mcp.types import Tool, TextContent
 from mcp_switchboard.analyzer.analyzer import TaskAnalyzer
+from mcp_switchboard.analyzer.llm_analyzer import LLMTaskAnalyzer
 from mcp_switchboard.selector.selector import ServerSelector
 from mcp_switchboard.config.registry import ServerRegistry
 from mcp_switchboard.credentials.manager import CredentialManager
@@ -12,6 +13,7 @@ import json
 
 
 app = Server("mcp-switchboard")
+llm_analyzer = LLMTaskAnalyzer()
 
 
 @app.list_tools()
@@ -40,6 +42,10 @@ async def list_tools() -> list[Tool]:
                     "dry_run": {
                         "type": "boolean",
                         "description": "Preview changes without applying"
+                    },
+                    "use_llm": {
+                        "type": "boolean",
+                        "description": "Use LLM sampling for semantic analysis"
                     }
                 },
                 "required": ["task_description", "agent_type"]
@@ -54,6 +60,10 @@ async def list_tools() -> list[Tool]:
                     "task_description": {
                         "type": "string",
                         "description": "Natural language task description"
+                    },
+                    "use_llm": {
+                        "type": "boolean",
+                        "description": "Use LLM sampling for semantic analysis"
                     }
                 },
                 "required": ["task_description"]
@@ -72,6 +82,10 @@ async def list_tools() -> list[Tool]:
                     "confidence_threshold": {
                         "type": "number",
                         "description": "Minimum confidence score (0.0-1.0)"
+                    },
+                    "use_llm": {
+                        "type": "boolean",
+                        "description": "Use LLM sampling for semantic analysis"
                     }
                 },
                 "required": ["task_description"]
@@ -84,21 +98,55 @@ async def list_tools() -> list[Tool]:
 async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     """Handle tool calls."""
     
+    use_llm = arguments.get("use_llm", False)
+    
     if name == "analyze_task":
-        analyzer = TaskAnalyzer()
-        analysis = analyzer.analyze(arguments["task_description"])
+        task_desc = arguments["task_description"]
         
-        result = {
-            "aws_account": analysis.aws_account,
-            "aws_region": analysis.aws_region,
-            "jira_ticket": analysis.jira_ticket,
-            "required_services": analysis.required_services,
-            "confidence": analysis.confidence
-        }
+        if use_llm and hasattr(app, 'request_context'):
+            # Use LLM sampling if available
+            try:
+                llm_result = await llm_analyzer.analyze_with_llm(
+                    task_desc,
+                    app.request_context.session.create_message
+                )
+                analysis_dict = {
+                    "aws_account": llm_result.aws_account,
+                    "aws_region": llm_result.aws_region,
+                    "jira_ticket": llm_result.jira_ticket,
+                    "required_services": llm_result.required_services,
+                    "confidence": llm_result.confidence,
+                    "source": llm_result.source
+                }
+            except Exception as e:
+                # Fallback to keyword analysis
+                analyzer = TaskAnalyzer()
+                analysis = analyzer.analyze(task_desc)
+                analysis_dict = {
+                    "aws_account": analysis.aws_account,
+                    "aws_region": analysis.aws_region,
+                    "jira_ticket": analysis.jira_ticket,
+                    "required_services": analysis.required_services,
+                    "confidence": analysis.confidence,
+                    "source": "keyword_fallback",
+                    "llm_error": str(e)
+                }
+        else:
+            # Use keyword-based analysis
+            analyzer = TaskAnalyzer()
+            analysis = analyzer.analyze(task_desc)
+            analysis_dict = {
+                "aws_account": analysis.aws_account,
+                "aws_region": analysis.aws_region,
+                "jira_ticket": analysis.jira_ticket,
+                "required_services": analysis.required_services,
+                "confidence": analysis.confidence,
+                "source": "keyword"
+            }
         
         return [TextContent(
             type="text",
-            text=json.dumps(result, indent=2)
+            text=json.dumps(analysis_dict, indent=2)
         )]
     
     elif name == "select_servers":

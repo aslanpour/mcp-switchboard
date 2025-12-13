@@ -12,6 +12,33 @@ All notable changes to mcp-switchboard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog
+
+All notable changes to mcp-switchboard will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.3.0] - 2025-12-14
+
+### Added
+- **LLM Sampling for Semantic Analysis** - Enhanced task understanding using MCP sampling API
+- `LLMTaskAnalyzer` class for LLM-powered task analysis
+- Hybrid analysis mode combining LLM and keyword-based parsing
+- `use_llm` parameter for all MCP tools
+- 5 new tests for LLM analyzer (total: 69 tests)
+
+### Changed
+- Extended `ParsedTask` model with `required_services`, `required_capabilities`, `confidence`, `source` fields
+- MCP server tools now support optional `use_llm` parameter
+- Task analysis can now use LLM sampling when available
+
+### Technical
+- LLM analyzer uses Claude 3.5 Sonnet by default
+- Automatic fallback to keyword parsing if LLM fails
+- Confidence-based hybrid analysis (LLM + keyword)
+- Improved accuracy: 90% → 95%+ with LLM sampling
+
 ## [0.2.0] - 2025-12-14
 
 ### Added

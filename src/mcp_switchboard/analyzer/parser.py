@@ -13,6 +13,10 @@ class ParsedTask(BaseModel):
     jira_ticket: Optional[str] = None
     mentioned_services: List[str] = []
     keywords: List[str] = []
+    required_services: List[str] = []
+    required_capabilities: List[str] = []
+    confidence: float = 0.0
+    source: str = "keyword"
 
 
 class TaskParser:
