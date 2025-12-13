@@ -22,12 +22,28 @@ Intelligent MCP server orchestrator that automates configuration, orchestration,
 
 ### Installation
 
+**Using uv (Recommended - Fast & Modern):**
+
+```bash
+# Install from PyPI
+uv pip install mcp-switchboard
+
+# Or run directly without installation
+uvx mcp-switchboard --analyze "Deploy ECS to prod"
+uvx mcp-switchboard-server  # Run MCP server
+```
+
+**From source:**
+
 ```bash
 # Clone repository
-git clone https://github.com/your-org/mcp-switchboard
+git clone https://github.com/aslanpour/mcp-switchboard
 cd mcp-switchboard
 
-# Install dependencies
+# Install with uv
+uv pip install -e .
+
+# Or with pip
 pip install -e .
 ```
 
