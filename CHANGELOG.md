@@ -26,6 +26,38 @@ All notable changes to mcp-switchboard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog
+
+All notable changes to mcp-switchboard will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.5.0] - 2025-12-14
+
+### Added
+- **SSE Transport Support** - Server-Sent Events transport for MCP server
+- **HTTP Transport Support** - HTTP/JSON-RPC transport for MCP server
+- **Multi-Transport Launcher** - Unified interface for all transport types
+- `TransportType` enum (STDIO, SSE, HTTP)
+- 3 new tests for transports (total: 79 tests)
+
+### Features
+- Run MCP server over SSE for web clients
+- Run MCP server over HTTP for REST clients
+- Switch between transports dynamically
+- Network-based MCP server deployment
+
+### Technical
+- SSE transport using `SseServerTransport` from MCP SDK
+- HTTP transport with JSON-RPC protocol
+- Starlette-based web applications
+- Uvicorn server for production deployment
+
+### Milestone
+- **100% of deferred features complete** (5/5)
+- **All original roadmap tasks complete** (30/30)
+
 ## [0.4.0] - 2025-12-14
 
 ### Added
