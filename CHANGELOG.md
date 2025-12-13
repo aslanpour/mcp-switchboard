@@ -5,6 +5,34 @@ All notable changes to mcp-switchboard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog
+
+All notable changes to mcp-switchboard will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.2.0] - 2025-12-14
+
+### Added
+- **MCP Server with stdio transport** - Full MCP protocol implementation
+- Three MCP tools: `setup_mcp_servers`, `analyze_task`, `select_servers`
+- Python 3.10+ support with MCP SDK integration
+- `uv` package manager support for faster dependency management
+- New entry point: `mcp-switchboard-server` for running MCP server
+- Comprehensive MCP server tests (5 new tests)
+
+### Changed
+- Upgraded minimum Python version from 3.9 to 3.10
+- Added `mcp` as core dependency
+- Updated pyproject.toml for Python 3.10+ and MCP SDK
+
+### Technical
+- MCP server implements stdio transport
+- Async tool handlers for all operations
+- JSON-formatted tool responses
+- Full integration with existing analyzer and selector components
+
 ## [0.1.0] - 2025-12-14
 
 ### Added
