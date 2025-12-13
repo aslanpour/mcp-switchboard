@@ -99,26 +99,40 @@ mypy src/
 
 ## Status
 
-**Current Version:** v0.2.0 - Production Ready with MCP Server
+**Current Version:** v0.5.0 - Components Complete, Integration In Progress
 
-**Completion:**
-- ✅ v0.1.0: Core functionality (100%)
-- ✅ v0.2.0: MCP Server with stdio transport (100%)
-- ⏸️ v0.3.0: LLM sampling & advanced features (planned)
+**⚠️ IMPORTANT: This project is NOT production-ready yet**
 
-**What's Working:**
-- Task analysis (90%+ accuracy)
-- Server selection with confidence scoring
-- Credential management (AWS SSO, OAuth, tokens)
-- Multi-agent support (Cursor, Kiro, Claude)
-- Configuration management with rollback
-- State tracking and history
-- **MCP Server with 3 tools** (NEW in v0.2.0)
-- **uv/uvx package management** (NEW in v0.2.0)
+**Component Completion:** 85%
+- ✅ Task analysis (keyword + LLM)
+- ✅ Server selection with confidence scoring
+- ✅ Credential management (AWS SSO, OAuth, tokens)
+- ✅ Configuration management with rollback
+- ✅ State tracking and history
+- ✅ MCP server with 4 tools
+- ✅ Multi-transport (STDIO/SSE/HTTP)
+- ✅ Server subprocess management
 
-**Tests:** 64/64 passing (100%)
+**Functional Completion:** 30-40%
+- ⚠️ setup_mcp_servers is a stub (doesn't actually configure)
+- ⚠️ No credential renewal in workflow
+- ⚠️ No health validation in workflow
+- ❌ No rollback tool exposed
+- ❌ No end-to-end integration
 
-See `CHANGELOG.md` for version history.
+**What Works:**
+- analyze_task tool (extracts task requirements)
+- select_servers tool (recommends MCP servers)
+- manage_servers tool (subprocess management)
+
+**What Doesn't Work:**
+- Actual MCP server configuration
+- Automatic credential renewal
+- Complete orchestration workflow
+
+**See `MISSING-REQUIREMENTS.md` for detailed implementation plan (~2.75 hours remaining)**
+
+**Tests:** 79/79 passing (components only, no integration tests)
 
 ## License
 
