@@ -19,6 +19,35 @@ All notable changes to mcp-switchboard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+# Changelog
+
+All notable changes to mcp-switchboard will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.4.0] - 2025-12-14
+
+### Added
+- **Server Subprocess Management** - Full lifecycle management for MCP server processes
+- `ServerManager` class for managing server subprocesses
+- `manage_servers` MCP tool with start/stop/restart/list/health actions
+- 7 new tests for server manager (total: 76 tests)
+
+### Features
+- Start MCP servers as subprocesses
+- Stop servers gracefully with timeout and force kill
+- Restart servers with new configuration
+- List all running servers
+- Health check for server processes
+- Automatic cleanup on shutdown
+
+### Technical
+- Async subprocess management with asyncio
+- Graceful shutdown with configurable timeout
+- Process tracking with PID monitoring
+- Duplicate server name protection
+
 ## [0.3.0] - 2025-12-14
 
 ### Added

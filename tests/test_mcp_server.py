@@ -8,11 +8,12 @@ async def test_list_tools():
     """Test tool listing."""
     tools = await list_tools()
     
-    assert len(tools) == 3
+    assert len(tools) == 4
     tool_names = [t.name for t in tools]
     assert "setup_mcp_servers" in tool_names
     assert "analyze_task" in tool_names
     assert "select_servers" in tool_names
+    assert "manage_servers" in tool_names
 
 
 @pytest.mark.asyncio

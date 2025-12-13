@@ -9,11 +9,13 @@ from mcp_switchboard.config.registry import ServerRegistry
 from mcp_switchboard.credentials.manager import CredentialManager
 from mcp_switchboard.config.writer import ConfigWriter
 from mcp_switchboard.config.models import AgentPlatform
+from mcp_switchboard.lifecycle.server_manager import ServerManager
 import json
 
 
 app = Server("mcp-switchboard")
 llm_analyzer = LLMTaskAnalyzer()
+server_manager = ServerManager()
 
 
 @app.list_tools()
@@ -89,6 +91,34 @@ async def list_tools() -> list[Tool]:
                     }
                 },
                 "required": ["task_description"]
+            }
+        ),
+        Tool(
+            name="manage_servers",
+            description="Manage MCP server subprocesses (start/stop/restart/list)",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["start", "stop", "restart", "list", "health"],
+                        "description": "Action to perform"
+                    },
+                    "server_name": {
+                        "type": "string",
+                        "description": "Server identifier (required for start/stop/restart/health)"
+                    },
+                    "command": {
+                        "type": "string",
+                        "description": "Command to execute (required for start)"
+                    },
+                    "args": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Command arguments"
+                    }
+                },
+                "required": ["action"]
             }
         )
     ]
@@ -234,6 +264,66 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             type="text",
             text=json.dumps(result, indent=2)
         )]
+    
+    elif name == "manage_servers":
+        action = arguments["action"]
+        
+        if action == "list":
+            servers = server_manager.list_servers()
+            return [TextContent(
+                type="text",
+                text=json.dumps({"servers": servers}, indent=2)
+            )]
+        
+        elif action == "start":
+            server_name = arguments["server_name"]
+            command = arguments["command"]
+            args = arguments.get("args", [])
+            
+            server = await server_manager.start_server(server_name, command, args)
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "action": "started",
+                    "server": server_name,
+                    "pid": server.pid
+                }, indent=2)
+            )]
+        
+        elif action == "stop":
+            server_name = arguments["server_name"]
+            stopped = await server_manager.stop_server(server_name)
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "action": "stopped",
+                    "server": server_name,
+                    "success": stopped
+                }, indent=2)
+            )]
+        
+        elif action == "restart":
+            server_name = arguments["server_name"]
+            server = await server_manager.restart_server(server_name)
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "action": "restarted",
+                    "server": server_name,
+                    "pid": server.pid
+                }, indent=2)
+            )]
+        
+        elif action == "health":
+            server_name = arguments["server_name"]
+            healthy = await server_manager.health_check(server_name)
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "server": server_name,
+                    "healthy": healthy
+                }, indent=2)
+            )]
     
     raise ValueError(f"Unknown tool: {name}")
 
