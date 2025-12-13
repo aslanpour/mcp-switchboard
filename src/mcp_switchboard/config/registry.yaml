@@ -1,0 +1,45 @@
+servers:
+  atlassian-mcp:
+    name: "Atlassian MCP Server"
+    description: "Jira and Confluence integration"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-atlassian"]
+    env:
+      ATLASSIAN_URL: "${ATLASSIAN_URL}"
+      ATLASSIAN_EMAIL: "${ATLASSIAN_EMAIL}"
+      ATLASSIAN_API_TOKEN: "${ATLASSIAN_API_TOKEN}"
+    capabilities: ["jira", "confluence"]
+    authentication_type: "api_token"
+    confidence_keywords: ["jira", "ticket", "confluence", "DEVOPS-"]
+  
+  aws-api-mcp:
+    name: "AWS API MCP Server"
+    description: "AWS CLI integration"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-aws"]
+    env:
+      AWS_PROFILE: "${AWS_PROFILE}"
+      AWS_REGION: "${AWS_REGION}"
+    capabilities: ["aws", "cloud"]
+    authentication_type: "aws_sso"
+    confidence_keywords: ["aws", "ec2", "ecs", "lambda", "s3", "rds"]
+  
+  terraform-registry-mcp:
+    name: "Terraform Registry MCP"
+    description: "Terraform module search and documentation"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-terraform"]
+    capabilities: ["terraform", "infrastructure"]
+    authentication_type: "none"
+    confidence_keywords: ["terraform", "tf", "infrastructure", "iac"]
+  
+  github-mcp:
+    name: "GitHub MCP Server"
+    description: "GitHub repository and PR management"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_TOKEN: "${GITHUB_TOKEN}"
+    capabilities: ["github", "git", "pr"]
+    authentication_type: "api_token"
+    confidence_keywords: ["github", "pr", "pull request", "repository"]
