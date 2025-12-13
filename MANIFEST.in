@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include pyproject.toml
+recursive-include src/mcp_switchboard/config *.yaml
+recursive-include src/mcp_switchboard/state *.sql
+recursive-include docs *.md
