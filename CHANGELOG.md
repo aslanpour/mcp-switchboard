@@ -5,6 +5,32 @@ All notable changes to mcp-switchboard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-14
+
+### Added
+- **Performance metrics collection** - Track and analyze execution times
+- **Automatic retry utilities** - Exponential backoff for transient failures
+- **TTL caching** - Cache function results to improve performance
+- **get_metrics tool** - Expose performance metrics via MCP
+- **Timing decorators** - Automatic performance tracking for key functions
+
+### Changed
+- TaskAnalyzer.analyze now tracked with @timed decorator
+- All key operations now collect performance metrics
+- Metrics available via get_metrics MCP tool
+
+### Technical
+- MetricsCollector class for aggregating performance data
+- TTLCache for function result caching
+- retry_async and retry_sync decorators for error recovery
+- @timed decorator for automatic performance tracking
+
+### Milestone
+- **Production hardening complete**
+- **7 MCP tools available**
+- **Enhanced observability**
+- **85 tests passing (100%)**
+
 ## [1.0.0] - 2025-12-14
 
 ### Added

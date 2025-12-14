@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List, Optional
 from pydantic import BaseModel
 from .parser import TaskParser, ParsedTask
+from ..utils.metrics import timed
 
 
 class TaskAnalysis(BaseModel):
@@ -23,6 +24,7 @@ class TaskAnalyzer:
     def __init__(self) -> None:
         self.parser = TaskParser()
     
+    @timed("task_analysis_ms")
     def analyze(self, task_description: str, project_path: str = "") -> TaskAnalysis:
         """Analyze task and return structured analysis."""
         # Parse with keywords

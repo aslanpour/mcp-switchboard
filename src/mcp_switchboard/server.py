@@ -154,6 +154,20 @@ async def list_tools() -> list[Tool]:
                 },
                 "required": ["agent_type"]
             }
+        ),
+        Tool(
+            name="get_metrics",
+            description="Get performance metrics and statistics",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "metric_name": {
+                        "type": "string",
+                        "description": "Optional specific metric name (returns all if not provided)"
+                    }
+                },
+                "required": []
+            }
         )
     ]
 
@@ -481,6 +495,37 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
                 "count": len(snapshots)
             }, indent=2)
         )]
+    
+    elif name == "get_metrics":
+        metric_name = arguments.get("metric_name")
+        
+        from mcp_switchboard.utils.metrics import get_collector
+        collector = get_collector()
+        
+        if metric_name:
+            stats = collector.get_stats(metric_name)
+            if stats is None:
+                return [TextContent(
+                    type="text",
+                    text=json.dumps({"error": f"Metric '{metric_name}' not found"}, indent=2)
+                )]
+            
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "metric": metric_name,
+                    "stats": stats
+                }, indent=2)
+            )]
+        else:
+            all_stats = collector.get_all_stats()
+            return [TextContent(
+                type="text",
+                text=json.dumps({
+                    "metrics": all_stats,
+                    "count": len(all_stats)
+                }, indent=2)
+            )]
     
     raise ValueError(f"Unknown tool: {name}")
 
