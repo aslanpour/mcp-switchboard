@@ -99,40 +99,40 @@ mypy src/
 
 ## Status
 
-**Current Version:** v0.5.0 - Components Complete, Integration In Progress
+**Current Version:** v0.6.0 - Core Orchestration Complete
 
-**⚠️ IMPORTANT: This project is NOT production-ready yet**
+**Functional Completion:** 85%
 
-**Component Completion:** 85%
+**What Works:**
 - ✅ Task analysis (keyword + LLM)
 - ✅ Server selection with confidence scoring
 - ✅ Credential management (AWS SSO, OAuth, tokens)
-- ✅ Configuration management with rollback
+- ✅ Configuration writing with snapshots
+- ✅ Configuration rollback
+- ✅ Health validation
 - ✅ State tracking and history
-- ✅ MCP server with 4 tools
+- ✅ MCP server with 6 tools
 - ✅ Multi-transport (STDIO/SSE/HTTP)
 - ✅ Server subprocess management
+- ✅ **Full orchestration workflow** (NEW in v0.6.0)
 
-**Functional Completion:** 30-40%
-- ⚠️ setup_mcp_servers is a stub (doesn't actually configure)
-- ⚠️ No credential renewal in workflow
-- ⚠️ No health validation in workflow
-- ❌ No rollback tool exposed
-- ❌ No end-to-end integration
+**MCP Tools Available:**
+1. `setup_mcp_servers` - Complete orchestration (analysis → selection → credentials → config → health)
+2. `analyze_task` - Extract task requirements
+3. `select_servers` - Recommend MCP servers
+4. `manage_servers` - Subprocess management
+5. `rollback_configuration` - Restore previous config (NEW in v0.6.0)
+6. `list_snapshots` - View available snapshots (NEW in v0.6.0)
 
-**What Works:**
-- analyze_task tool (extracts task requirements)
-- select_servers tool (recommends MCP servers)
-- manage_servers tool (subprocess management)
+**What's Missing (15%):**
+- Real-time health monitoring during server startup
+- Advanced credential automation (OAuth browser automation)
+- Cost estimation for AWS operations
+- Historical pattern learning improvements
 
-**What Doesn't Work:**
-- Actual MCP server configuration
-- Automatic credential renewal
-- Complete orchestration workflow
+**Tests:** 85/85 passing (100%)
 
-**See `MISSING-REQUIREMENTS.md` for detailed implementation plan (~2.75 hours remaining)**
-
-**Tests:** 79/79 passing (components only, no integration tests)
+See `CHANGELOG.md` for version history.
 
 ## License
 

@@ -8,12 +8,14 @@ async def test_list_tools():
     """Test tool listing."""
     tools = await list_tools()
     
-    assert len(tools) == 4
+    assert len(tools) == 6
     tool_names = [t.name for t in tools]
     assert "setup_mcp_servers" in tool_names
     assert "analyze_task" in tool_names
     assert "select_servers" in tool_names
     assert "manage_servers" in tool_names
+    assert "rollback_configuration" in tool_names
+    assert "list_snapshots" in tool_names
 
 
 @pytest.mark.asyncio
@@ -87,3 +89,72 @@ async def test_unknown_tool():
     """Test error handling for unknown tool."""
     with pytest.raises(ValueError, match="Unknown tool"):
         await call_tool("nonexistent_tool", {})
+
+
+
+@pytest.mark.asyncio
+async def test_rollback_configuration():
+    """Test rollback_configuration tool."""
+    import json
+    from pathlib import Path
+    from mcp_switchboard.config.models import AgentPlatform
+    from mcp_switchboard.config.writer import ConfigWriter
+    
+    # Create a snapshot first
+    agent_platform = AgentPlatform.CURSOR
+    writer = ConfigWriter(agent_platform, scope="user")
+    snapshot_id = writer.update_servers([{
+        "name": "test-server",
+        "command": "test",
+        "args": []
+    }])
+    
+    # Test rollback with specific snapshot
+    result = await call_tool(
+        "rollback_configuration",
+        {"agent_type": "cursor", "snapshot_id": snapshot_id}
+    )
+    
+    assert len(result) == 1
+    data = json.loads(result[0].text)
+    assert data["action"] == "rollback"
+    assert data["agent_type"] == "cursor"
+    assert data["snapshot_id"] == snapshot_id
+    assert data["success"] is True
+    
+    # Test rollback without snapshot (uses latest)
+    result = await call_tool(
+        "rollback_configuration",
+        {"agent_type": "cursor"}
+    )
+    
+    assert len(result) == 1
+    data = json.loads(result[0].text)
+    assert data["success"] is True
+
+
+@pytest.mark.asyncio
+async def test_list_snapshots():
+    """Test list_snapshots tool."""
+    import json
+    from mcp_switchboard.config.models import AgentPlatform
+    from mcp_switchboard.config.writer import ConfigWriter
+    
+    # Create some snapshots
+    agent_platform = AgentPlatform.CURSOR
+    writer = ConfigWriter(agent_platform, scope="user")
+    writer.update_servers([{"name": "test1", "command": "test1", "args": []}])
+    writer.update_servers([{"name": "test2", "command": "test2", "args": []}])
+    
+    # Test list_snapshots
+    result = await call_tool(
+        "list_snapshots",
+        {"agent_type": "cursor"}
+    )
+    
+    assert len(result) == 1
+    data = json.loads(result[0].text)
+    assert data["agent_type"] == "cursor"
+    assert "snapshots" in data
+    assert data["count"] >= 2  # At least the 2 we created
+    assert isinstance(data["snapshots"], list)
