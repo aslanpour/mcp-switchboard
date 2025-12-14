@@ -330,16 +330,31 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             result["snapshot_id"] = snapshot_id
             result["config_path"] = str(writer.config_path)
             
-            # 6. Validate health
+            # 6. Validate health with real server startup
             from mcp_switchboard.health.validator import HealthValidator
-            validator = HealthValidator()
-            health_results = {}
+            validator = HealthValidator(max_retries=2, timeout=10)
+            validator.set_server_manager(server_manager)
             
-            for server_name in [s.server_name for s in selection.selected_servers]:
-                # For now, just check if config was written
-                health_results[server_name] = "configured"
+            # Validate all configured servers
+            health_checks = await validator.validate_servers(server_configs)
             
-            result["health"] = health_results
+            result["health"] = {
+                check.server_name: {
+                    "healthy": check.healthy,
+                    "startup_time_ms": check.startup_time_ms,
+                    "tools_available": check.tools_available,
+                    "error": check.error_message if not check.healthy else None
+                }
+                for check in health_checks
+            }
+            
+            # Check if any server failed health check
+            failed_servers = [c for c in health_checks if not c.healthy]
+            if failed_servers:
+                result["warnings"] = result.get("warnings", []) + [
+                    f"Health check failed for: {', '.join(c.server_name for c in failed_servers)}"
+                ]
+            
             result["status"] = "success"
         else:
             result["status"] = "Dry-run complete - no changes made"

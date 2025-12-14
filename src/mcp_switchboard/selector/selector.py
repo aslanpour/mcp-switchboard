@@ -1,6 +1,6 @@
 """Server selector for choosing MCP servers based on task analysis."""
 from __future__ import annotations
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 from ..config.registry import ServerRegistry
 from ..analyzer.analyzer import TaskAnalysis
@@ -23,9 +23,23 @@ class ServerSelection(BaseModel):
 class ServerSelector:
     """Select MCP servers based on task analysis."""
     
-    def __init__(self, registry: ServerRegistry, confidence_threshold: float = 0.7) -> None:
+    def __init__(
+        self,
+        registry: ServerRegistry,
+        confidence_threshold: float = 0.7,
+        use_learning: bool = True
+    ) -> None:
         self.registry = registry
         self.threshold = confidence_threshold
+        self.use_learning = use_learning
+        self._learner = None
+        
+        if use_learning:
+            try:
+                from .learning import PatternLearner
+                self._learner = PatternLearner()
+            except Exception:
+                self.use_learning = False
     
     def select(self, analysis: TaskAnalysis) -> ServerSelection:
         """Select servers based on task analysis."""
@@ -79,7 +93,24 @@ class ServerSelector:
                 score += 0.2
                 break
         
-        return min(score, 1.0)
+        base_score = min(score, 1.0)
+        
+        # Boost with historical learning if available
+        if self.use_learning and self._learner:
+            try:
+                # Create task fingerprint
+                task_fp = f"{analysis.aws_account}:{','.join(analysis.required_services)}"
+                server_name = server_config.get("name", "")
+                
+                # Boost confidence based on historical success
+                boosted_score = self._learner.boost_confidence(
+                    server_name, base_score, task_fp
+                )
+                return boosted_score
+            except Exception:
+                pass
+        
+        return base_score
     
     def _generate_reasoning(self, analysis: TaskAnalysis, server_config: Dict) -> str:
         """Generate reasoning for server selection."""
