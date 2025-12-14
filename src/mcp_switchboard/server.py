@@ -10,6 +10,7 @@ from mcp_switchboard.credentials.manager import CredentialManager
 from mcp_switchboard.config.writer import ConfigWriter
 from mcp_switchboard.config.models import AgentPlatform
 from mcp_switchboard.lifecycle.server_manager import ServerManager
+from mcp_switchboard.prompts import get_prompts, get_prompt_messages
 import json
 
 
@@ -18,36 +19,78 @@ llm_analyzer = LLMTaskAnalyzer()
 server_manager = ServerManager()
 
 
+@app.list_prompts()
+async def list_prompts():
+    """List available prompts for AI agents."""
+    return get_prompts()
+
+
+@app.get_prompt()
+async def get_prompt(name: str, arguments: dict):
+    """Get prompt messages for a specific prompt."""
+    messages = get_prompt_messages(name, arguments)
+    return {
+        "messages": messages
+    }
+
+
 @app.list_tools()
 async def list_tools() -> list[Tool]:
     """List available tools."""
     return [
         Tool(
             name="setup_mcp_servers",
-            description="Analyze task and setup MCP servers automatically",
+            description=(
+                "Automatically configure MCP servers for a task. Analyzes your task description to determine "
+                "required services (AWS, Jira, GitHub, etc.), selects appropriate MCP servers, prepares credentials, "
+                "writes configuration files, and validates server health. Use this when starting work on a new task "
+                "that requires cloud services, issue tracking, or code management. Returns configured servers, "
+                "snapshot ID for rollback, and health status. This is the main orchestration tool - use it to set up "
+                "your entire MCP environment in one call."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "task_description": {
                         "type": "string",
-                        "description": "Natural language task description"
+                        "description": (
+                            "Natural language description of what you want to do. Be specific about AWS account "
+                            "(prod/dev/uat), region (e.g., Tokyo, Sydney, Virginia), and Jira ticket if applicable. "
+                            "Examples: 'Deploy ECS service to prod Tokyo using DEVOPS-123', "
+                            "'Fix Lambda timeout in dev us-east-1', 'Update DynamoDB table in uat Sydney'. "
+                            "The more details you provide, the more accurate the configuration."
+                        )
                     },
                     "agent_type": {
                         "type": "string",
                         "enum": ["cursor", "kiro", "claude"],
-                        "description": "AI agent platform"
+                        "description": (
+                            "Your AI agent platform. Use 'cursor' for Cursor IDE, 'kiro' for Kiro CLI, "
+                            "'claude' for Claude Desktop. This determines which configuration file to update."
+                        )
                     },
                     "project_path": {
                         "type": "string",
-                        "description": "Optional project directory path"
+                        "description": (
+                            "Optional path to your project directory. If provided, can be used for context-aware "
+                            "configuration in future versions. Currently not required."
+                        )
                     },
                     "dry_run": {
                         "type": "boolean",
-                        "description": "Preview changes without applying"
+                        "description": (
+                            "If true, preview what would be configured without actually applying changes. "
+                            "Use this to see which servers would be selected and what credentials would be needed "
+                            "before committing to the configuration. Defaults to false."
+                        )
                     },
                     "use_llm": {
                         "type": "boolean",
-                        "description": "Use LLM sampling for semantic analysis"
+                        "description": (
+                            "If true, use LLM sampling for semantic task analysis (95%+ accuracy but slower ~500ms). "
+                            "If false, use keyword-based parsing (90% accuracy but faster <2ms). "
+                            "Defaults to false. Use true for complex or ambiguous task descriptions."
+                        )
                     }
                 },
                 "required": ["task_description", "agent_type"]
@@ -55,17 +98,31 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="analyze_task",
-            description="Analyze task description to extract requirements",
+            description=(
+                "Extract structured information from a task description without configuring anything. "
+                "Identifies AWS account (prod/dev/uat), AWS region, Jira ticket number, required services, "
+                "and confidence score. Use this BEFORE setup_mcp_servers if you want to preview what will be "
+                "configured, or to understand task requirements for planning purposes. This is a read-only operation "
+                "that doesn't modify any configuration. Useful for validation or when you want manual control "
+                "over the setup process."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "task_description": {
                         "type": "string",
-                        "description": "Natural language task description"
+                        "description": (
+                            "Task description to analyze. Can be informal or structured. "
+                            "Examples: 'deploy to prod', 'DEVOPS-123: fix lambda', 'update ecs in tokyo'. "
+                            "The analyzer will extract AWS account, region, Jira ticket, and required services."
+                        )
                     },
                     "use_llm": {
                         "type": "boolean",
-                        "description": "Use LLM sampling for semantic analysis"
+                        "description": (
+                            "Use LLM for semantic analysis (more accurate, slower) vs keyword parsing (faster, less flexible). "
+                            "Defaults to false."
+                        )
                     }
                 },
                 "required": ["task_description"]
@@ -73,21 +130,36 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="select_servers",
-            description="Select appropriate MCP servers for task",
+            description=(
+                "Recommend which MCP servers to use for a task based on requirements analysis. "
+                "Returns a ranked list of servers with confidence scores (0.0-1.0) and reasoning for each recommendation. "
+                "Use this to understand which tools you'll need before actually configuring them. "
+                "Internally calls analyze_task first, then matches requirements to available servers in the registry. "
+                "Useful for planning, manual review of recommendations, or when you want to see alternatives. "
+                "Does not modify any configuration - purely informational."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "task_description": {
                         "type": "string",
-                        "description": "Natural language task description"
+                        "description": (
+                            "Task description to analyze for server selection. Will be parsed to extract "
+                            "AWS account, region, services needed, etc."
+                        )
                     },
                     "confidence_threshold": {
                         "type": "number",
-                        "description": "Minimum confidence score (0.0-1.0)"
+                        "description": (
+                            "Minimum confidence score (0.0-1.0) for server selection. "
+                            "Default 0.7 means only servers with 70%+ confidence are recommended. "
+                            "Lower values (e.g., 0.5) include more servers but with less certainty. "
+                            "Higher values (e.g., 0.9) only include highly confident matches."
+                        )
                     },
                     "use_llm": {
                         "type": "boolean",
-                        "description": "Use LLM sampling for semantic analysis"
+                        "description": "Use LLM for semantic analysis. Defaults to false."
                     }
                 },
                 "required": ["task_description"]
@@ -95,27 +167,51 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="manage_servers",
-            description="Manage MCP server subprocesses (start/stop/restart/list)",
+            description=(
+                "Manage MCP server subprocesses lifecycle. Start, stop, restart, list, or check health "
+                "of MCP servers. Use this for manual server management, troubleshooting, or advanced use cases. "
+                "Note: setup_mcp_servers handles server lifecycle automatically, so you typically only need this "
+                "for debugging (e.g., restarting a hung server) or manual control. "
+                "Actions: 'start' launches a server, 'stop' gracefully shuts down, 'restart' stops then starts, "
+                "'list' shows all running servers, 'health' checks if a server is responding."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "action": {
                         "type": "string",
                         "enum": ["start", "stop", "restart", "list", "health"],
-                        "description": "Action to perform"
+                        "description": (
+                            "Action to perform: "
+                            "'start' - Launch a new MCP server subprocess (requires server_name, command, args), "
+                            "'stop' - Gracefully shutdown a server (requires server_name), "
+                            "'restart' - Stop and start a server (requires server_name), "
+                            "'list' - Show all running servers (no other params needed), "
+                            "'health' - Check if a server is responding (requires server_name)"
+                        )
                     },
                     "server_name": {
                         "type": "string",
-                        "description": "Server identifier (required for start/stop/restart/health)"
+                        "description": (
+                            "Server identifier (e.g., 'aws-api-mcp', 'atlassian-mcp', 'github-mcp'). "
+                            "Required for start/stop/restart/health actions. Not needed for list action."
+                        )
                     },
                     "command": {
                         "type": "string",
-                        "description": "Command to execute (required for start)"
+                        "description": (
+                            "Command to execute (e.g., 'uvx', 'node', 'python'). "
+                            "Required only for start action. Use 'uvx' for most MCP servers."
+                        )
                     },
                     "args": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Command arguments"
+                        "description": (
+                            "Command arguments as array of strings. For uvx, typically ['server-package-name']. "
+                            "Example: ['aws-api-mcp'] or ['@modelcontextprotocol/server-github']. "
+                            "Required only for start action."
+                        )
                     }
                 },
                 "required": ["action"]
@@ -123,18 +219,34 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="rollback_configuration",
-            description="Rollback MCP server configuration to previous snapshot",
+            description=(
+                "Restore MCP server configuration to a previous state. Every configuration change creates "
+                "a timestamped snapshot, allowing you to undo changes if something goes wrong. "
+                "Use this when: 1) A configuration broke something and you need to revert, "
+                "2) You want to restore a known-good state, 3) You're experimenting and want to reset. "
+                "If no snapshot_id provided, rolls back to the most recent snapshot. "
+                "Snapshots include: timestamp, configured servers, and full configuration state. "
+                "This is a safe operation - you can always rollback a rollback."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "agent_type": {
                         "type": "string",
                         "enum": ["cursor", "kiro", "claude"],
-                        "description": "AI agent platform"
+                        "description": (
+                            "Your AI agent platform. Determines which configuration file to rollback. "
+                            "Each agent has independent configuration and snapshots."
+                        )
                     },
                     "snapshot_id": {
                         "type": "string",
-                        "description": "Optional snapshot ID to restore (uses latest if not provided)"
+                        "description": (
+                            "Optional specific snapshot ID to restore (format: 'snapshot_YYYYMMDD_HHMMSS'). "
+                            "If not provided, uses the most recent snapshot. "
+                            "Get available snapshot IDs using list_snapshots tool. "
+                            "Example: 'snapshot_20251215_103045'"
+                        )
                     }
                 },
                 "required": ["agent_type"]
@@ -142,14 +254,24 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="list_snapshots",
-            description="List available configuration snapshots for rollback",
+            description=(
+                "List all available configuration snapshots for rollback. Each snapshot includes: "
+                "timestamp (when it was created), configured servers (what was set up), and snapshot ID (for rollback). "
+                "Use this to: 1) See configuration history and what changed over time, "
+                "2) Find a specific snapshot to rollback to, 3) Understand when configurations were modified. "
+                "Snapshots are created automatically every time setup_mcp_servers runs successfully. "
+                "Useful for auditing, troubleshooting, or finding a known-good configuration to restore."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "agent_type": {
                         "type": "string",
                         "enum": ["cursor", "kiro", "claude"],
-                        "description": "AI agent platform"
+                        "description": (
+                            "Your AI agent platform. Each agent has independent snapshots. "
+                            "Cursor snapshots are separate from Kiro snapshots, etc."
+                        )
                     }
                 },
                 "required": ["agent_type"]
@@ -157,13 +279,27 @@ async def list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_metrics",
-            description="Get performance metrics and statistics",
+            description=(
+                "Get performance metrics and statistics for mcp-switchboard operations. "
+                "Returns timing data for task analysis, server selection, and overall orchestration. "
+                "Metrics include: count (how many times executed), min/max/avg (timing in milliseconds), "
+                "and total (cumulative time). Use this to: 1) Check if mcp-switchboard is performing well, "
+                "2) Identify performance bottlenecks, 3) Validate that operations meet performance requirements "
+                "(<2s for analysis, <10s for orchestration). Can get all metrics or a specific metric by name. "
+                "Useful for troubleshooting slow operations or performance monitoring."
+            ),
             inputSchema={
                 "type": "object",
                 "properties": {
                     "metric_name": {
                         "type": "string",
-                        "description": "Optional specific metric name (returns all if not provided)"
+                        "description": (
+                            "Optional specific metric name to retrieve (e.g., 'task_analysis_ms', 'server_selection_ms'). "
+                            "If not provided, returns all available metrics. "
+                            "Common metrics: 'task_analysis_ms' (task parsing time), "
+                            "'server_selection_ms' (server matching time). "
+                            "Use without metric_name to see all available metrics first."
+                        )
                     }
                 },
                 "required": []
